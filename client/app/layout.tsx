@@ -22,6 +22,7 @@ export default function RootLayout({
             <a href="/login">Login</a>
 
             <a href="/register">Register</a>
+            
 
           </div>
 
