@@ -34,4 +34,17 @@ export class WorkspaceController {
 
     return this.workspaceService.inviteUser(workspaceId, dto.email, dto.role);
   }
+
+  // get workspace members
+  @UseGuards(JwtAuthGuard)
+@Get("members")
+getMembers(@Request() req) {
+
+  const workspaceId = req.headers["workspaceid"]
+
+  return this.workspaceService.getMembers(
+    workspaceId
+  )
+
+}
 }
