@@ -1,44 +1,48 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document, Types } from 'mongoose'
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
 
-export type TaskDocument = Task & Document
+export type TaskDocument = Task & Document;
 
 @Schema({ timestamps: true })
 export class Task {
-
   @Prop({ required: true })
-  title: string
+  title: string;
 
   @Prop()
-  description: string
+  description: string;
 
   @Prop({
-    enum: ['todo','in_progress','done'],
-    default: 'todo'
+    enum: ['todo', 'in_progress', 'done'],
+    default: 'todo',
   })
-  status: string
+  status: string;
 
   @Prop({
-    enum: ['low','medium','high'],
-    default: 'medium'
+    enum: ['low', 'medium', 'high'],
+    default: 'medium',
   })
-  priority: string
+  priority: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Project' })
-  projectId: Types.ObjectId
+  projectId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Workspace' })
-  workspaceId: Types.ObjectId
+  workspaceId: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
-  assignee: Types.ObjectId
+  assignee: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
-  createdBy: Types.ObjectId
+  createdBy: Types.ObjectId;
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  labels: string[];
 
   @Prop()
-  dueDate: Date
-
+  dueDate: Date;
 }
 
-export const TaskSchema = SchemaFactory.createForClass(Task)
+export const TaskSchema = SchemaFactory.createForClass(Task);
