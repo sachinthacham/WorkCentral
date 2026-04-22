@@ -19,9 +19,35 @@ export class UsersService {
     return this.userModel.findOne({ email })
   }
 
-  async updateRefreshToken(userId: string, token: string) {
+  async findById(userId: string) {
+    return this.userModel.findById(userId).exec()
+  }
+
+  async updateRefreshToken(userId: string, token: string | null) {
     return this.userModel.findByIdAndUpdate(userId, {
       refreshToken: token
+    }).exec()
+  }
+
+  async setPasswordResetToken(userId: string, token: string, expiry: Date) {
+    return this.userModel.findByIdAndUpdate(userId, {
+      passwordResetToken: token,
+      passwordResetExpiry: expiry,
+    }).exec()
+  }
+
+  async findByPasswordResetToken(token: string) {
+    return this.userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpiry: { $gt: new Date() },
+    }).exec()
+  }
+
+  async updatePassword(userId: string, hashedPassword: string) {
+    return this.userModel.findByIdAndUpdate(userId, {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetExpiry: null,
     }).exec()
   }
 
