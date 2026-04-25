@@ -5,8 +5,9 @@ export class CreateTaskDto {
   @IsString()
   title: string
 
+  @IsOptional()
   @IsString()
-  description: string
+  description?: string
 
   @IsString()
   projectId: string
@@ -18,4 +19,8 @@ export class CreateTaskDto {
   @IsOptional()
   @IsArray()
   labels?: string[]
+
+  @IsOptional()
+  @IsString()
+  parentTaskId?: string
 }
