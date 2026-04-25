@@ -20,3 +20,6 @@ export class Project {
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project)
+
+// Full-text search index
+ProjectSchema.index({ name: 'text', description: 'text' }, { name: 'project_text_idx', weights: { name: 3, description: 1 } })
