@@ -1,98 +1,83 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+login credentials
+Email: capstone.owner@demo.local
+Password: DemoFull2026!
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+----------------------Unit testing----------------------------------
+Did the API testing for Unit tests for workspace, Tasks, pagination helper, AuthService (login / refresh / forgot / reset), ProjectsService (members / roles), SprintsService + SprintsController (with mocks), plus the existing email.service spec.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+api/src/common/helpers/paginated-result.helper.spec.ts
+api/src/modules/auth/auth.service.spec.ts
+api/src/modules/email/email.service.spec.ts
+api/src/modules/projects/projects.service.spec.ts
+api/src/modules/sprints/sprints.controller.spec.ts
+api/src/modules/sprints/sprints.service.spec.ts
+api/src/modules/tasks/tasks.services.spec.ts
+api/src/modules/workspace/workspace.service.spec.ts
 
-## Description
+Did the UI testing for Dashboard
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+client/app/dashboard/page.test.tsx
+client/components/TaskComments.test.tsx
+client/components/ui/Button.test.tsx
+client/components/ui/EmptyState.test.tsx
+client/features/auth/api.test.ts
 
-## Project setup
+------------------------Roles-----------------------
+Workspace OWNER
+---Can---
+Use POST /workspace/invite and PATCH /workspace/settings (must be workspace OWNER or ADMIN per RolesGuard).
+Pass ProjectRolesGuard as if they had project access: workspace OWNER / ADMIN bypass project-role checks, so they can call MANAGER-only project member routes for any project in that workspace (add/remove/change roles), even without a ProjectMember row.
+Do anything that only needs JwtAuthGuard: create/list workspace, list workspace members, create/list projects, tasks, sprints, search, dashboard analytics, notifications, etc.
 
-```bash
-$ npm install
-```
+---Can’t---
+Nothing extra is denied by role guards beyond what any logged-in user lacks (e.g. still need valid token and headers). There is no separate “owner-only” API beyond sharing the same OWNER/ADMIN rules as ADMIN for the guarded workspace routes.
 
-## Compile and run the project
+Workspace ADMIN
 
-```bash
-# development
-$ npm run start
+---Can---
+Same workspace admin APIs as OWNER: POST /workspace/invite, PATCH /workspace/settings.
+Same project guard bypass as OWNER (full project member management on all projects in the workspace).
+All JWT-only routes (projects, tasks, sprints, search, dashboard, notifications, etc.).
 
-# watch mode
-$ npm run start:dev
+---Can’t---
+By API, not distinguished from OWNER on the guarded routes (both are in @Roles('OWNER', 'ADMIN')). Any “owner vs admin” difference is not enforced in the snippets we use.
 
-# production mode
-$ npm run start:prod
-```
+Workspace MEMBER
 
-## Run tests
+---Can---
+All JWT-only routes: workspaces (create/list), GET /workspace/members, projects (create/list), tasks, comments, sprints, search, dashboard, notifications, etc.
+Project roster: GET /projects/:projectId/members if they have a project role of MANAGER, MEMBER, or VIEWER (or if they are workspace OWNER/ADMIN via bypass).
+Change project roster only if they are project MANAGER or workspace OWNER/ADMIN (bypass).
 
-```bash
-# unit tests
-$ npm run test
+---Can’t---
+POST /workspace/invite or PATCH /workspace/settings (blocked by RolesGuard unless they are OWNER/ADMIN).
+Add/remove project members or PATCH member role if they are only project MEMBER or VIEWER and not workspace OWNER/ADMIN.
 
-# e2e tests
-$ npm run test:e2e
+Workspace GUEST
+Can / can’t (for enforced behavior): same as workspace MEMBER on the routes we checked—only OWNER/ADMIN get the extra workspace and project-bypass powers. There is no separate “guest” branch in RolesGuard / ProjectRolesGuard.
+Can’t (meaningfully, by design intent)
+Treated as a limited workspace role in the schema, but task/project “read-only” is not fully enforced in the API (tasks/sprints/etc. only use JwtAuthGuard).
+################################################
+Project MANAGER
+Can
+POST /projects/:projectId/members (invite/add to project).
+GET /projects/:projectId/members.
+PATCH /projects/:projectId/members/:userId/role.
+DELETE /projects/:projectId/members/:userId (cannot remove self; enforced in service).
+All JWT-only app features (tasks, sprints, …) like any logged-in user.
+Can’t
+Use POST /workspace/invite or PATCH /workspace/settings unless they are also workspace OWNER/ADMIN.
 
-# test coverage
-$ npm run test:cov
-```
+Project MEMBER
+Can
+GET /projects/:projectId/members (listed explicitly in @ProjectRoles('MANAGER', 'MEMBER', 'VIEWER')).
+All JWT-only features (tasks, etc.)—no project-role check on task routes today.
+Can’t
+Add/remove project members or change roles (those routes require MANAGER, unless workspace OWNER/ADMIN bypass applies).
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Project VIEWER
+Can
+GET /projects/:projectId/members (same as MEMBER for this route).
+JWT-only features (including tasks)—again, tasks are not gated by VIEWER in the backend.
+Can’t
+Add/remove members or change roles (needs MANAGER or workspace OWNER/ADMIN bypass).
