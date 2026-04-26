@@ -43,6 +43,36 @@ export class Task {
 
   @Prop()
   dueDate: Date;
+
+  @Prop()
+  coverColor: string;
+
+  @Prop({ type: Number, default: 0 })
+  order: number;
+
+  @Prop({ type: [Object], default: [] })
+  checklist: Array<{ id: string, text: string, isCompleted: boolean }>;
+
+  @Prop({ type: [String], default: [] })
+  attachments: string[];
+
+  @Prop({ type: Types.ObjectId, ref: 'Sprint' })
+  sprintId: Types.ObjectId;
+
+  // Sub-tasks: null means this is a top-level task
+  @Prop({ type: Types.ObjectId, ref: 'Task', default: null })
+  parentTaskId: Types.ObjectId | null;
+
+  // Tasks that must be completed before this task can start
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Task' }], default: [] })
+  blockedBy: Types.ObjectId[];
+
+  // Tasks that this task blocks (cannot start until this task is done)
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Task' }], default: [] })
+  blocks: Types.ObjectId[];
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);
+
+// Full-text search index — used by SearchService
+TaskSchema.index({ title: 'text', description: 'text' }, { name: 'task_text_idx', weights: { title: 3, description: 1 } });
