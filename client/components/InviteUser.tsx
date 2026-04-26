@@ -2,66 +2,71 @@
 
 import { useState } from "react"
 import { inviteUser } from "@/features/workspace/api"
+import Button from "./ui/Button"
+import { Input } from "./ui/Input"
+import { Send } from "lucide-react"
 
-export default function InviteUser(){
-
-  const [email,setEmail] = useState("")
-  const [role,setRole] = useState("member")
-  const [message,setMessage] = useState("")
+export default function InviteUser() {
+  const [email, setEmail] = useState("")
+  const [role, setRole] = useState("MEMBER")
+  const [status, setStatus] = useState<"idle" | "ok" | "err">("idle")
+  const [loading, setLoading] = useState(false)
 
   const handleInvite = async () => {
-
+    if (!email) return
+    setLoading(true); setStatus("idle")
     try {
-
       await inviteUser({ email, role })
-
-      setMessage("✅ User invited successfully")
-
-    } catch (err:any) {
-
-      if(err.response?.status === 403){
-        setMessage("❌ You are not allowed to invite users")
-      } else {
-        setMessage("❌ Something went wrong")
-      }
-
+      setEmail(""); setStatus("ok")
+      setTimeout(() => setStatus("idle"), 4000)
+    } catch (err: any) {
+      setStatus("err")
+    } finally {
+      setLoading(false)
     }
   }
 
-  return(
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="sm:col-span-2">
+          <Input
+            label="Email address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="colleague@company.com"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-slate-700">Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-teal-500 focus:outline-none"
+          >
+            <option value="MEMBER">Member</option>
+            <option value="MANAGER">Manager</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+      </div>
 
-    <div className="border p-4 rounded mt-6">
-
-      <h2 className="text-xl font-bold mb-4">
-        Invite User
-      </h2>
-
-      <input
-        className="border p-2 w-full mb-2"
-        placeholder="User email"
-        onChange={(e)=>setEmail(e.target.value)}
-      />
-
-      <select
-        className="border p-2 w-full mb-2"
-        onChange={(e)=>setRole(e.target.value)}
-      >
-        <option value="member">Member</option>
-        <option value="manager">Manager</option>
-        <option value="admin">Admin</option>
-      </select>
-
-      <button
-        className="bg-blue-500 text-white p-2 w-full"
+      <Button
+        loading={loading}
+        disabled={!email}
+        icon={<Send size={13} />}
         onClick={handleInvite}
       >
-        Invite
-      </button>
+        Send Invitation
+      </Button>
 
-      {message && (
-        <p className="mt-3 text-sm">{message}</p>
+      {status === "ok" && (
+        <p className="text-sm font-medium text-emerald-600">✓ Invitation sent successfully</p>
       )}
-
+      {status === "err" && (
+        <p className="text-sm font-medium text-red-600">Failed to send invitation. Please try again.</p>
+      )}
     </div>
   )
 }
