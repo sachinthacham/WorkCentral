@@ -1,26 +1,283 @@
 @import "tailwindcss";
 
+/* ── Meridian design system — warm studio + teal accent ─────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Canvas — warm paper, not flat grey */
+  --bg:              #f3f1ed;
+  --bg-elevated:     #faf9f7;
+  --surface:         #ffffff;
+  --surface-raised:  #ffffff;
+  --surface-overlay: rgba(255, 255, 255, 0.72);
+
+  /* Sidebar — near-black with depth */
+  --sidebar-bg:      #0c0e11;
+  --sidebar-surface: rgba(255, 255, 255, 0.04);
+  --sidebar-text:    #9ca3af;
+  --sidebar-active:  #f4f4f5;
+  --sidebar-hover:   rgba(255, 255, 255, 0.06);
+  --sidebar-border:  rgba(255, 255, 255, 0.07);
+  --sidebar-accent:  #14b8a6;
+
+  /* Brand — teal (professional, less “default purple”) */
+  --primary:         #0d9488;
+  --primary-hover:   #0f766e;
+  --primary-subtle:  rgba(13, 148, 136, 0.12);
+  --primary-text:    #115e59;
+  --accent-warm:     #d97706;
+
+  /* Text */
+  --text-primary:    #18181b;
+  --text-secondary:  #3f3f46;
+  --text-muted:      #71717a;
+  --text-disabled:   #a1a1aa;
+
+  /* Borders */
+  --border:          rgba(24, 24, 27, 0.09);
+  --border-strong:   rgba(24, 24, 27, 0.14);
+
+  /* Status */
+  --todo-bg:         #f4f4f5;
+  --todo-border:     #a1a1aa;
+  --todo-text:       #52525b;
+
+  --progress-bg:     #e0f2fe;
+  --progress-border: #38bdf8;
+  --progress-text:   #0369a1;
+
+  --done-bg:         #dcfce7;
+  --done-border:     #4ade80;
+  --done-text:       #15803d;
+
+  --high-bg:    #fee2e2;
+  --high-border: #f87171;
+  --high-text:   #b91c1c;
+  --medium-bg:  #fef3c7;
+  --medium-border: #fbbf24;
+  --medium-text: #92400e;
+  --low-bg:     #d1fae5;
+  --low-border: #34d399;
+  --low-text:   #065f46;
+
+  --shadow-sm: 0 1px 2px rgb(24 24 27 / 0.05), 0 1px 3px rgb(24 24 27 / 0.08);
+  --shadow-md: 0 4px 12px rgb(24 24 27 / 0.08), 0 2px 4px rgb(24 24 27 / 0.04);
+  --shadow-lg: 0 12px 32px rgb(24 24 27 / 0.1), 0 4px 12px rgb(24 24 27 / 0.06);
+  --shadow-xl: 0 24px 48px rgb(24 24 27 / 0.14), 0 8px 20px rgb(24 24 27 / 0.08);
+
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  18px;
+  --radius-2xl: 22px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-surface:    var(--surface);
+  --color-primary:    var(--primary);
+  --color-border:     var(--border);
+  --font-sans:        var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display:     var(--font-outfit), var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ───────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Subtle dot grid on main app canvas (applied in SidebarWrapper) */
+.app-canvas-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 100% 0%, rgba(13, 148, 136, 0.07), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 0% 100%, rgba(217, 119, 6, 0.05), transparent 50%),
+    radial-gradient(var(--text-primary) 0.6px, transparent 0.6px);
+  background-size: auto, auto, 20px 20px;
+}
+
+/* Auth pages — layered mesh */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(13, 148, 136, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(217, 119, 6, 0.12), transparent 45%),
+    radial-gradient(ellipse 50% 35% at 50% 100%, rgba(15, 118, 110, 0.1), transparent 50%),
+    linear-gradient(165deg, #f0eeea 0%, #e8e6e1 45%, #ebe9e4 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 28rem;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(24, 24, 27, 0.04) inset;
+}
+
+.auth-logo {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, var(--primary) 0%, #0f766e 50%, #134e4a 100%);
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  color: white;
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.45);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 82, 91, 0.65);
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-interactive:hover {
+  border-color: rgba(13, 148, 136, 0.35);
+  box-shadow: var(--shadow-md);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-todo {
+  background: var(--todo-bg);
+  border-color: var(--todo-border);
+  color: var(--todo-text);
+}
+.badge-progress {
+  background: var(--progress-bg);
+  border-color: var(--progress-border);
+  color: var(--progress-text);
+}
+.badge-done {
+  background: var(--done-bg);
+  border-color: var(--done-border);
+  color: var(--done-text);
+}
+.badge-high {
+  background: var(--high-bg);
+  border-color: var(--high-border);
+  color: var(--high-text);
+}
+.badge-medium {
+  background: var(--medium-bg);
+  border-color: var(--medium-border);
+  color: var(--medium-text);
+}
+.badge-low {
+  background: var(--low-bg);
+  border-color: var(--low-border);
+  color: var(--low-text);
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e4e4e7 0%, #f4f4f5 50%, #e4e4e7 100%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-md);
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.divider {
+  border-top: 1px solid var(--border);
 }
