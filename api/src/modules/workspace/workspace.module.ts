@@ -9,10 +9,12 @@ import { WorkspaceService } from './workspace.service';
 import { WorkspaceController } from './workspace.controller';
 import { UsersModule } from '../users/users.module';
 import { RolesGuard } from '../../common/guards/roles.guard'
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     UsersModule,
+    EmailModule,
     MongooseModule.forFeature([
       { name: Workspace.name, schema: WorkspaceSchema },
       { name: WorkspaceMember.name, schema: WorkspaceMemberSchema },

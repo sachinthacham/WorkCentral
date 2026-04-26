@@ -12,6 +12,12 @@ export class Workspace {
   @Prop({ type: Types.ObjectId, ref: 'User' })
   owner: Types.ObjectId
 
+  @Prop({ type: Object, default: {} })
+  settings: {
+    theme?: string;
+    allowPublicLinks?: boolean;
+    defaultView?: string;
+  }
 }
 
 export const WorkspaceSchema = SchemaFactory.createForClass(Workspace)
