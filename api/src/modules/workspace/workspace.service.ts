@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
 
@@ -68,7 +68,7 @@ async inviteUser(
   const user = await this.userModel.findOne({ email })
 
   if(!user){
-    throw new Error("User not found")
+    throw new NotFoundException("No account found with that email")
   }
 
   const existing = await this.memberModel.findOne({
@@ -77,7 +77,7 @@ async inviteUser(
   })
 
   if(existing){
-    throw new Error("User already in workspace")
+    throw new ConflictException("User already in workspace")
   }
 
   const member = await this.memberModel.create({

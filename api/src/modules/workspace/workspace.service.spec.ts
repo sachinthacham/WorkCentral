@@ -74,7 +74,7 @@ describe('WorkspaceService', () => {
       userModel.findOne.mockResolvedValue(null)
       await expect(
         service.inviteUser(workspaceId, 'nope@test.com', 'MEMBER'),
-      ).rejects.toThrow('User not found')
+      ).rejects.toThrow('No account found with that email')
     })
 
     it('throws when user is already a member', async () => {
