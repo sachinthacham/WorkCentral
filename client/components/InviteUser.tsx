@@ -10,6 +10,7 @@ export default function InviteUser() {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState("MEMBER")
   const [status, setStatus] = useState<"idle" | "ok" | "err">("idle")
+  const [errorMessage, setErrorMessage] = useState("")
   const [loading, setLoading] = useState(false)
 
   const handleInvite = async () => {
@@ -20,6 +21,7 @@ export default function InviteUser() {
       setEmail(""); setStatus("ok")
       setTimeout(() => setStatus("idle"), 4000)
     } catch (err: any) {
+      setErrorMessage(err?.response?.data?.message || "Failed to send invitation. Please try again.")
       setStatus("err")
     } finally {
       setLoading(false)
@@ -65,7 +67,7 @@ export default function InviteUser() {
         <p className="text-sm font-medium text-emerald-600">✓ Invitation sent successfully</p>
       )}
       {status === "err" && (
-        <p className="text-sm font-medium text-red-600">Failed to send invitation. Please try again.</p>
+        <p className="text-sm font-medium text-red-600">{errorMessage}</p>
       )}
     </div>
   )
