@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 
 export type SprintDocument = Sprint & Document;
 
@@ -20,7 +20,7 @@ export class Sprint {
   })
   status: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Project', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Project', required: true })
   projectId: Types.ObjectId;
 }
 
