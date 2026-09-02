@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 
 export type TaskDocument = Task & Document;
 
@@ -23,16 +23,16 @@ export class Task {
   })
   priority: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Project' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Project' })
   projectId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Workspace' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Workspace' })
   workspaceId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   assignee: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 
   @Prop({
@@ -56,19 +56,19 @@ export class Task {
   @Prop({ type: [String], default: [] })
   attachments: string[];
 
-  @Prop({ type: Types.ObjectId, ref: 'Sprint' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Sprint' })
   sprintId: Types.ObjectId;
 
   // Sub-tasks: null means this is a top-level task
-  @Prop({ type: Types.ObjectId, ref: 'Task', default: null })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Task', default: null })
   parentTaskId: Types.ObjectId | null;
 
   // Tasks that must be completed before this task can start
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Task' }], default: [] })
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Task' }], default: [] })
   blockedBy: Types.ObjectId[];
 
   // Tasks that this task blocks (cannot start until this task is done)
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Task' }], default: [] })
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Task' }], default: [] })
   blocks: Types.ObjectId[];
 }
 

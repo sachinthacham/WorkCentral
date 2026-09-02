@@ -1,15 +1,15 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { Document, Types } from "mongoose"
+import { Document, Types, SchemaTypes } from "mongoose"
 
 export type TaskActivityDocument = TaskActivity & Document
 
 @Schema({ timestamps: true })
 export class TaskActivity {
 
-  @Prop({ type: Types.ObjectId, ref: "Task" })
+  @Prop({ type: SchemaTypes.ObjectId, ref: "Task" })
   taskId: Types.ObjectId
 
-  @Prop({ type: Types.ObjectId, ref: "User" })
+  @Prop({ type: SchemaTypes.ObjectId, ref: "User" })
   userId: Types.ObjectId
 
   @Prop()
