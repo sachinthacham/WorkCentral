@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document, Types } from 'mongoose'
+import { Document, Types, SchemaTypes } from 'mongoose'
 
 export type ProjectDocument = Project & Document
 
@@ -12,10 +12,10 @@ export class Project {
   @Prop()
   description: string
 
-  @Prop({ type: Types.ObjectId, ref: 'Workspace' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Workspace' })
   workspaceId: Types.ObjectId
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId
 }
 
