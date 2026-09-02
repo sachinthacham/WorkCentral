@@ -26,7 +26,14 @@ export default function Dashboard() {
   const [showInvite, setShowInvite] = useState(false)
   const [perProjectCounts, setPerProjectCounts] = useState<{ id: string; name: string; count: number }[]>([])
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
+  const [role, setRole] = useState<string | null>(null)
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    setRole(localStorage.getItem("role"))
+    setWorkspaceId(localStorage.getItem("workspaceId"))
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +49,8 @@ export default function Dashboard() {
           localStorage.setItem("workspaceId", ws[0].workspaceId)
           localStorage.setItem("role", ws[0].role)
         }
+        setWorkspaceId(localStorage.getItem("workspaceId"))
+        setRole(localStorage.getItem("role"))
 
         const [proj, analytics] = await Promise.all([
           getProjects(),
@@ -78,11 +87,8 @@ export default function Dashboard() {
     load()
   }, [router])
 
-  const role = typeof window !== "undefined" ? localStorage.getItem("role") : null
   const canInvite = role === "OWNER" || role === "ADMIN" || role === "admin"
-  const currentWs = workspaces.find(
-    (w) => w.workspaceId === (typeof window !== "undefined" ? localStorage.getItem("workspaceId") : null)
-  ) ?? workspaces[0]
+  const currentWs = workspaces.find((w) => w.workspaceId === workspaceId) ?? workspaces[0]
 
   if (loading) return <SkeletonPage />
 
@@ -364,7 +370,7 @@ export default function Dashboard() {
                   <p className="truncate text-[13px] font-semibold text-zinc-800">{w.name}</p>
                   <p className="text-[11px] text-zinc-500 capitalize">{w.role?.toLowerCase()}</p>
                 </div>
-                {w.workspaceId === localStorage.getItem("workspaceId") && (
+                {w.workspaceId === workspaceId && (
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500 shadow-[0_0_6px_rgba(20,184,166,0.8)]" />
                 )}
               </div>

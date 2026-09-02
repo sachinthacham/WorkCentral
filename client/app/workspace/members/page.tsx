@@ -25,8 +25,10 @@ export default function MembersPage() {
   const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
-  const role = typeof window !== "undefined" ? localStorage.getItem("role") : null
+  const [role, setRole] = useState<string | null>(null)
   const canInvite = role === "OWNER" || role === "ADMIN" || role === "admin"
+
+  useEffect(() => { setRole(localStorage.getItem("role")) }, [])
 
   const load = async () => {
     try {

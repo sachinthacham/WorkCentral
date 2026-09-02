@@ -24,6 +24,9 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
   const [selectedRole, setSelectedRole] = useState<"MANAGER" | "MEMBER" | "VIEWER">("MEMBER")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [storedRole, setStoredRole] = useState<string | null>(null)
+
+  useEffect(() => { setStoredRole(localStorage.getItem("role")) }, [])
 
   const load = async () => {
     try {
@@ -44,8 +47,7 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
 
   useEffect(() => { load() }, [projectId])
 
-  const canManage = myRole === "MANAGER" ||
-    ["OWNER", "ADMIN"].includes(typeof window !== "undefined" ? localStorage.getItem("role") ?? "" : "")
+  const canManage = myRole === "MANAGER" || ["OWNER", "ADMIN"].includes(storedRole ?? "")
 
   const handleAdd = async () => {
     if (!selectedUser) return
