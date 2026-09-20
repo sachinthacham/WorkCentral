@@ -1,0 +1,31 @@
+name: Keep API warm
+
+# App Service F1 has no "Always On": the container is unloaded after ~20 minutes
+# idle and the next request pays a 30-60s cold start. This pings /health so the
+# app stays resident. /health skips rate limiting and does almost no work, so it
+# barely touches the 60 CPU-minutes/day free-tier quota.
+#
+# Run it manually ("Run workflow") ~10 minutes before a demo for a guaranteed
+# warm app — GitHub's scheduler can delay cron runs under load.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          URL="https://wms-api-sachintha.azurewebsites.net/health"
+          for i in 1 2 3 4 5 6 7 8; do
+            if body=$(curl -fsS --max-time 60 "$URL"); then
+              echo "$(date -u +%H:%M:%SZ) OK — $body"
+              exit 0
+            fi
+            echo "Attempt $i failed (cold start?), retrying in 20s…"
+            sleep 20
+          done
+          echo "::error::API unreachable after 8 attempts."
+          exit 1

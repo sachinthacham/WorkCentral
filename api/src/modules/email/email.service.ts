@@ -6,22 +6,27 @@ export class EmailService {
   private transporter;
   private readonly logger = new Logger(EmailService.name);
 
+  /** Public URL of the frontend, used to build links inside emails. */
+  private readonly appUrl = (process.env.APP_URL ?? 'http://localhost:3001').replace(/\/$/, '');
+  private readonly from = process.env.MAIL_FROM ?? '"Workspace App" <no-reply@workspace.com>';
+
   constructor() {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
+      host: process.env.SMTP_HOST ?? 'smtp.ethereal.email',
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: 'test', 
-        pass: 'test',
+        user: process.env.SMTP_USER ?? 'test',
+        pass: process.env.SMTP_PASS ?? 'test',
       },
     });
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string) {
-    const resetUrl = `http://localhost:3001/reset-password?token=${resetToken}`;
+    const resetUrl = `${this.appUrl}/reset-password?token=${resetToken}`;
     try {
       const info = await this.transporter.sendMail({
-        from: '"Workspace App" <no-reply@workspace.com>',
+        from: this.from,
         to: email,
         subject: 'Password Reset Request',
         html: `
@@ -41,13 +46,13 @@ export class EmailService {
   async sendInvitationEmail(email: string, workspaceName: string, role: string) {
     try {
       const info = await this.transporter.sendMail({
-        from: '"Workspace App" <no-reply@workspace.com>',
+        from: this.from,
         to: email,
         subject: `Invitation to join ${workspaceName}`,
         html: `
           <h3>You have been invited!</h3>
           <p>You have been invited to join the workspace <strong>${workspaceName}</strong> as a <strong>${role}</strong>.</p>
-          <a href="http://localhost:3000/invite?email=${email}">Click here to accept</a>
+          <a href="${this.appUrl}/invite?email=${encodeURIComponent(email)}">Click here to accept</a>
         `,
       });
       this.logger.log(`Email sent: ${info.messageId}`);

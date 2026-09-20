@@ -19,7 +19,8 @@ import { ProjectTasksQueryDto } from './dto/project-tasks-query.dto';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { extname } from 'path';
+import { getAttachmentsDir } from '../../common/helpers/uploads-path.helper';
 
 const ALLOWED_MIME_TYPES = [
   // Images
@@ -120,7 +121,7 @@ export class TasksController {
   @Post(':taskId/attachments')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: join(process.cwd(), 'uploads', 'attachments'),
+      destination: getAttachmentsDir(),
       filename: (_req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         const ext = extname(file.originalname).toLowerCase();

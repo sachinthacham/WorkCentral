@@ -1,0 +1,39 @@
+name: Seed database (destructive)
+
+# Manual only. Wipes every collection and reinserts the demo dataset.
+# Useful to reset the app to a clean, well-populated state before a demo.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "WIPE AND SEED" to confirm this deletes all data'
+        required: true
+        default: ''
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Check confirmation
+        if: ${{ github.event.inputs.confirm != 'WIPE AND SEED' }}
+        run: |
+          echo "::error::Confirmation text did not match. Nothing was changed."
+          exit 1
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - working-directory: api
+        run: npm ci
+
+      - name: Run seed
+        working-directory: api
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: npm run seed

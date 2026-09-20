@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios"
+import { API_BASE_URL } from "./config"
 
-const baseURL = "http://localhost:3000"
+const baseURL = API_BASE_URL
 
 export const api = axios.create({
   baseURL,

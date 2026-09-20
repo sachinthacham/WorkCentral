@@ -1,0 +1,167 @@
+name: CI/CD
+
+# Tests gate both deployments: nothing ships unless api + client tests pass.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22.x'
+  AZURE_WEBAPP_NAME: wms-api-sachintha
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Build (type-check)
+        run: npm run build
+      - name: Unit tests
+        run: npm test
+
+  test-client:
+    name: Test Client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - name: Unit tests
+        run: npm run test
+      - name: Production build
+        # Catches prerender/type errors here rather than on Vercel
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3000' }}
+        run: npm run build
+
+  deploy-api:
+    name: Deploy API to Azure (F1)
+    needs: [test-api, test-client]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://wms-api-sachintha.azurewebsites.net
+    permissions:
+      # Required for OIDC: no Azure password or publish profile is stored in GitHub.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install build dependencies
+        working-directory: api
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: api
+        run: npm run build
+
+      - name: Reinstall production dependencies only
+        # bcrypt is a native module: it must be built on Linux, matching the
+        # App Service runtime. F1 has too little memory for a reliable Oryx
+        # build on the instance, so we ship node_modules prebuilt from here.
+        working-directory: api
+        run: |
+          rm -rf node_modules
+          npm ci --omit=dev
+
+      - name: Create deployment package
+        working-directory: api
+        run: zip -r -q ../api-release.zip dist package.json package-lock.json node_modules
+
+      - name: Azure login (OIDC federated credential)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: api-release.zip
+
+      - name: Wait for cold start and verify /health
+        run: |
+          URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health"
+          for i in $(seq 1 20); do
+            body=$(curl -fsS --max-time 30 "$URL" 2>/dev/null) && {
+              echo "Health OK on attempt $i: $body"
+              echo "$body" | grep -q '"database":"connected"' \
+                && echo "Database connected." \
+                || { echo "::warning::API is up but the database is not connected — check MONGO_URI."; }
+              exit 0
+            }
+            echo "Attempt $i: not ready yet, retrying in 15s…"
+            sleep 15
+          done
+          echo "::error::API did not become healthy within ~5 minutes."
+          exit 1
+
+  deploy-client:
+    name: Deploy Client to Vercel
+    needs: [test-api, test-client]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel production environment
+        working-directory: client
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build
+        working-directory: client
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to production
+        working-directory: client
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

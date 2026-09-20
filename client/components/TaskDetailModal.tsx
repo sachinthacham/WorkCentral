@@ -13,6 +13,7 @@ import {
   Trash2, Plus, GitMerge, Link2, Link2Off, AlertCircle,
 } from "lucide-react"
 import TaskComments from "./TaskComments"
+import { apiAssetUrl } from "@/services/config"
 import TaskActivity from "./TaskActivity"
 import TaskSubtasks from "./TaskSubtasks"
 import TaskDependencies from "./TaskDependencies"
@@ -196,7 +197,7 @@ export default function TaskDetailModal({ task, isOpen, onClose, refresh }: any)
               </p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {attachments.map((url, i) => (
-                  <a key={i} href={`http://localhost:3000${url}`} target="_blank" rel="noreferrer"
+                  <a key={i} href={apiAssetUrl(url)} target="_blank" rel="noreferrer"
                     className="flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-100">
                     <Paperclip size={11} /> Attachment {i + 1}
                   </a>

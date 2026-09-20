@@ -14,6 +14,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { EmailModule } from './modules/email/email.module';
 import { SprintsModule } from './modules/sprints/sprints.module';
 import { SearchModule } from './modules/search/search.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { SearchModule } from './modules/search/search.module';
     EmailModule,
     SprintsModule,
     SearchModule,
+    HealthModule,
   ],
 
   providers: [

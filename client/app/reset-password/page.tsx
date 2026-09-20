@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { resetPassword } from "@/features/auth/api"
 import Link from "next/link"
 import { Lock, Eye, EyeOff, CheckCircle2, Zap } from "lucide-react"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token") ?? ""
@@ -124,5 +124,25 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * useSearchParams() opts the tree into client-side rendering, so it must sit
+ * behind a Suspense boundary or the production build fails to prerender.
+ */
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg)" }}>
+          <div className="card p-8 max-w-md w-full text-center">
+            <p className="text-sm text-slate-500">Loading…</p>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
