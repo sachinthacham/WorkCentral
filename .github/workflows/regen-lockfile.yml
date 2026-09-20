@@ -14,7 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-      - run: npm install -g npm@10.9.3
+      - run: npm install -g npm@latest
+      - run: node -v && npm -v
       - name: Resolve dependency tree from scratch
         working-directory: client
         run: |
