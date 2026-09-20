@@ -49,10 +49,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: client/package-lock.json
-      - name: Pin npm to the version that generated the lockfile
-        # Node 22 ships a newer npm that resolves the tree differently and
-        # rejects the committed lockfile. Pinning keeps CI and local in sync.
-        run: npm install -g npm@10.9.3
+      - name: Upgrade npm
+        # The npm bundled with Node 22 (10.9.x) hits an arborist bug on this
+        # dependency graph ("Cannot read properties of null (reading
+        # 'edgesOut')") and wrongly rejects a valid lockfile. npm 12 resolves it.
+        run: npm install -g npm@latest
       - name: Report toolchain versions
         run: node -v && npm -v
       - run: npm ci
