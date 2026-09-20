@@ -6,7 +6,7 @@ Production topology:
 |----------|-----------------------------------|-------------------|-----|
 | Frontend | Vercel                            | Hobby (free)      | _set after first deploy_ |
 | API      | Azure App Service, Linux, East Asia | **F1 (Free)**   | https://wms-api-sachintha.azurewebsites.net |
-| Database | MongoDB Atlas                     | M0 (free, 512 MB) | — |
+| Database | MongoDB Atlas (`cluster0.vu2pm9w`) | M0 (free, 512 MB) | db `saas-platform` |
 | CI/CD    | GitHub Actions                    | —                 | `.github/workflows/ci-cd.yml` |
 
 Atlas is used rather than Cosmos DB because the search module relies on MongoDB
@@ -77,7 +77,7 @@ Settings applied: startup command `node dist/main.js`, Web Sockets **on**
 | `VERCEL_TOKEN` | Vercel CLI auth | ⬜ pending |
 | `VERCEL_ORG_ID` | Vercel project targeting | ⬜ pending |
 | `VERCEL_PROJECT_ID` | Vercel project targeting | ⬜ pending |
-| `MONGO_URI` | used only by the manual seed workflow | ⬜ pending |
+| `MONGO_URI` | used only by the manual seed workflow | ✅ set |
 
 Repository **variable** (not secret) `NEXT_PUBLIC_API_URL` is used by the client
 CI build step.
@@ -145,6 +145,21 @@ If the API returns **403** on every route, the daily 60-CPU-minute quota is
 spent; it resets at 00:00 UTC (05:30 IST / 05:30 Sri Lanka time). There is no
 way to reset it sooner on F1 — scaling the plan to B1 temporarily is the only
 workaround.
+
+## Known gotchas hit during setup
+
+- **Region policy.** Azure for Students refuses most regions
+  (`RequestDisallowedByAzure`). East Asia works; Southeast Asia does not.
+- **`az role assignment` is broken in az CLI 2.90** — every subcommand returns
+  `MissingSubscription`, even read-only `list`. The underlying ARM API is fine;
+  use the portal or `az rest` against
+  `Microsoft.Authorization/roleAssignments` instead.
+- **Oryx cannot build this API on F1.** A server-side build reports
+  "Errors (0)" and then "Deployment Failed" — the 1 GB disk is exhausted by
+  `npm install` with devDependencies. Keep `SCM_DO_BUILD_DURING_DEPLOYMENT=false`
+  and let CI ship a prebuilt package.
+- **Basic publishing credentials are disabled** on the web app, so publish-profile
+  deployment does not work. The pipeline uses OIDC instead.
 
 ## Useful commands
 
