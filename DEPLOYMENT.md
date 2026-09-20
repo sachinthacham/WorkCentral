@@ -4,7 +4,7 @@ Production topology:
 
 | Piece    | Host                              | Tier              | URL |
 |----------|-----------------------------------|-------------------|-----|
-| Frontend | Vercel                            | Hobby (free)      | _set after first deploy_ |
+| Frontend | Vercel                            | Hobby (free)      | https://work-central.vercel.app |
 | API      | Azure App Service, Linux, East Asia | **F1 (Free)**   | https://wms-api-sachintha.azurewebsites.net |
 | Database | MongoDB Atlas (`cluster0.vu2pm9w`) | M0 (free, 512 MB) | db `saas-platform` |
 | CI/CD    | GitHub Actions                    | —                 | `.github/workflows/ci-cd.yml` |
@@ -17,7 +17,8 @@ Atlas is used rather than Cosmos DB because the search module relies on MongoDB
 ```
 Subscription    Azure for Students (8cc5fd52-7a69-4c3b-a0ad-36066b80c983)
 Resource group  rg-workspace-mgmt        (East Asia)
-App Service plan asp-workspace-f1        (Linux, F1)
+App Service plan asp-workspace-f1b       (Linux, F1)  <- app runs here
+App Service plan asp-workspace-f1        (Linux, F1)  empty spare
 Web App         wms-api-sachintha        (NODE|22-lts)
 ```
 
@@ -141,10 +142,17 @@ Roughly 15 minutes before:
    ~40 s; after the warm-up it is immediate.
 4. Optional: run the **Seed database** workflow for a clean dataset.
 
-If the API returns **403** on every route, the daily 60-CPU-minute quota is
-spent; it resets at 00:00 UTC (05:30 IST / 05:30 Sri Lanka time). There is no
-way to reset it sooner on F1 — scaling the plan to B1 temporarily is the only
-workaround.
+If the API returns **403** or **503** on every route, check:
+
+```bash
+az webapp show -n wms-api-sachintha -g rg-workspace-mgmt --query "{state:state,usage:usageState}" -o tsv
+```
+
+`QuotaExceeded / Exceeded` means the daily 60-CPU-minute allowance is spent. It
+resets at 00:00 UTC (05:30 Sri Lanka time) and nothing else clears it — not a
+restart, and not moving the app to another App Service plan. If you genuinely
+cannot wait, create a *new* web app on a clean plan, or scale to B1
+(~2 US cents/hour).
 
 ## Known gotchas hit during setup
 
@@ -160,6 +168,19 @@ workaround.
   and let CI ship a prebuilt package.
 - **Basic publishing credentials are disabled** on the web app, so publish-profile
   deployment does not work. The pipeline uses OIDC instead.
+- **GitHub issues OIDC tokens with immutable subjects** for this account, e.g.
+  `repo:sachinthacham@143824853/WorkCentral@1204108018:environment:production`,
+  not the readable `repo:owner/name:...` form. Federated credentials exist for
+  both, plus the pre-rename `jira-clone-new` name.
+- **npm 10.9 (bundled with Node 22) cannot resolve this client dependency
+  graph.** It crashes with `Cannot read properties of null (reading 'edgesOut')`
+  and, in `npm ci`, wrongly reports a picomatch mismatch against a perfectly
+  valid lockfile. CI installs `npm@latest` (12.x) before `npm ci` for the client.
+  Do not "fix" this by regenerating the lockfile — that is not the cause.
+- **Exhausting the F1 CPU quota sets `usageState: Exceeded` on the *site*, and
+  moving the app to a different App Service plan does not clear it.** Only the
+  daily 00:00 UTC reset does. A server-side (Oryx) build is the fastest way to
+  burn the whole 60 minutes — avoid it.
 
 ## Useful commands
 
