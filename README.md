@@ -23,12 +23,13 @@ Built as a final-year project by **Sachintha Chamindu**.
 4. [Architecture](#architecture)
 5. [Folder structure](#folder-structure)
 6. [Run locally](#run-locally)
-7. [Deploy to Azure (API) and Vercel (frontend)](#deploy-to-azure-api-and-vercel-frontend)
-8. [CI/CD pipeline](#cicd-pipeline)
-9. [API reference](#api-reference)
-10. [Environment variables](#environment-variables)
-11. [Testing](#testing)
-12. [Known limitations](#known-limitations)
+7. [Run with Docker](#run-with-docker)
+8. [Deploy to Azure (API) and Vercel (frontend)](#deploy-to-azure-api-and-vercel-frontend)
+9. [CI/CD pipeline](#cicd-pipeline)
+10. [API reference](#api-reference)
+11. [Environment variables](#environment-variables)
+12. [Testing](#testing)
+13. [Known limitations](#known-limitations)
 
 ---
 
@@ -139,7 +140,8 @@ The same project page also has a **Board** (Kanban) view and a **Sprints** page;
 | Files and email | **Multer**, **Nodemailer** | Attachments, password-reset and invitation emails |
 | Testing | **Jest** + ts-jest (API), **Vitest** + Testing Library + jsdom (client) | Unit and component tests |
 | Hosting | **Azure App Service (Linux, F1)** for the API, **Vercel** for the frontend, **MongoDB Atlas** for data | Production |
-| CI/CD | **GitHub Actions**, **Azure OIDC federated login**, **Vercel CLI** | Test, build and deploy |
+| Containers | **Docker** (multi-stage builds, non-root runtime), **Docker Compose** | Local full-stack dev, portable builds |
+| CI/CD | **GitHub Actions**, **Azure OIDC federated login**, **Vercel CLI**, **GitHub Container Registry** | Test, build, publish images, deploy |
 
 ---
 
@@ -271,6 +273,8 @@ workspace-management-system/
 │   │       ├── email/
 │   │       └── health/
 │   ├── test/                         e2e scaffold
+│   ├── Dockerfile                    Multi-stage build → non-root runtime image
+│   ├── .dockerignore
 │   └── .env.example
 │
 ├── client/                           Next.js frontend
@@ -286,13 +290,17 @@ workspace-management-system/
 │   ├── services/                     api.ts (Axios + refresh), socket.ts, config.ts (API base URL)
 │   ├── types/                        Shared TypeScript types
 │   ├── public/screenshots/           README screenshots
+│   ├── Dockerfile                    Multi-stage build → Next.js standalone runtime image
+│   ├── .dockerignore
 │   └── .env.example
 │
 ├── .github/workflows/
 │   ├── ci-cd.yml                     Test → deploy API to Azure, deploy client to Vercel
+│   ├── docker-publish.yml            Test → build api/client images → push to GHCR
 │   ├── keep-warm.yml                 Pings /health so the F1 app stays loaded
 │   └── seed-database.yml             Manual, confirmation-gated database reset
 │
+├── docker-compose.yml                mongo + api + client, for local full-stack dev
 ├── DEPLOYMENT.md                     Detailed deployment runbook and gotchas
 └── README.md
 ```
@@ -394,6 +402,87 @@ This one account owns all the seeded data: 1 workspace ("Capstone Workspace"), 6
 cd api    && npm run build && npm run start:prod
 cd client && npm run build && npm run start      # serves on port 3001
 ```
+
+---
+
+## Run with Docker
+
+Everything is containerized: an [api/Dockerfile](api/Dockerfile) and [client/Dockerfile](client/Dockerfile), each a non-root, multi-stage build, plus a [docker-compose.yml](docker-compose.yml) that wires up MongoDB, the API and the client together. This runs entirely on your machine and is independent of the live Azure/Vercel deployment.
+
+> **Verified working end to end:** built both images, brought the stack up (`mongo` → `api` → `client`, in that dependency order, all reporting `healthy`), seeded demo data, logged in through the containerized API, fetched real seeded data (`Capstone Workspace`) with the returned JWT, loaded the client's landing and login pages, and confirmed data survives a full container restart via the named volumes.
+
+### Prerequisites
+
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) or Docker Engine + Compose plugin (Linux).
+
+### Run the whole stack
+
+```bash
+docker compose up --build
+```
+
+| What | Where |
+|---|---|
+| **Web app** | http://localhost:3001 |
+| **API** | http://localhost:3000 |
+| **API health** | http://localhost:3000/health |
+| **MongoDB** (mapped to host) | `mongodb://localhost:27017/saas-platform` |
+
+Load demo data into the containerized database. The seed script needs `ts-node`, which is a dev dependency deliberately **not** present in the production runtime image (see [Design notes](#design-notes)), so run it from the host against Mongo's exposed port instead of `docker compose exec`:
+
+```bash
+cd api
+MONGO_URI="mongodb://localhost:27017/saas-platform" npm run seed
+cd ..
+```
+
+(Needs `npm install` to have been run in `api/` at least once — see [Run locally](#run-locally) — so `ts-node` is available on the host.)
+
+Then sign in with the same demo login as [Run locally](#run-locally): `sachinthachamindu26@gmail.com` / `12345678`.
+
+Mongo data and uploaded attachments persist in Docker volumes (`mongo_data`, `api_uploads`) across restarts. To stop and wipe them:
+
+```bash
+docker compose down -v
+```
+
+### Build and run each image separately
+
+```bash
+# API
+docker build -t workcentral-api ./api
+docker run -p 3000:3000 \
+  -e MONGO_URI="mongodb+srv://…" \
+  -e JWT_SECRET="some-long-random-string" \
+  -e CORS_ORIGINS="http://localhost:3001" \
+  workcentral-api
+
+# Client — NEXT_PUBLIC_API_URL is inlined at build time, so pass it as a build arg
+docker build -t workcentral-client ./client \
+  --build-arg NEXT_PUBLIC_API_URL=http://localhost:3000
+docker run -p 3001:3001 workcentral-client
+```
+
+### Design notes
+
+- **Base image:** `node:22-bookworm-slim` (glibc), not Alpine. `bcrypt` ships prebuilt binaries for glibc targets, so `npm ci` installs it directly; Alpine (musl) would force a from-source compile with a C++ toolchain in the image.
+- **Multi-stage builds:** dependencies, build and runtime are separate stages, so the final image ships only compiled output and production `node_modules` — no compilers, no dev dependencies, no source `.ts` files.
+- **Client runtime image** uses Next.js's `output: "standalone"` (set in [client/next.config.ts](client/next.config.ts)), which produces a minimal self-contained server. Vercel ignores this setting and builds the app its own way, so it does not affect the Vercel deployment.
+- **Non-root:** both containers run as an unprivileged `nodeapp` user.
+- **Health checks:** each image's `HEALTHCHECK` calls the app's own endpoint (`/health` for the API, `/login` for the client) with plain `node -e`, so no extra tooling (like `curl`) needs to be installed in the image.
+- **Uploads:** the API stores attachments under `/app/uploads` (a declared `VOLUME`); in Compose this is the named volume `api_uploads`.
+- **No dev dependencies at runtime:** the `prod-deps` stage runs `npm ci --omit=dev`, so `ts-node` (used by `npm run seed`) is intentionally not in the running container — see the seeding command above, which runs it from the host instead.
+
+### Published images
+
+On every push to `main`, [.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml) builds and pushes both images to **GitHub Container Registry** after the same tests used in the main pipeline pass:
+
+```text
+ghcr.io/sachinthacham/workcentral/api:latest
+ghcr.io/sachinthacham/workcentral/client:latest
+```
+
+Each is also tagged with the short commit SHA that built it. This workflow only builds and publishes images — it does not deploy them anywhere; the live app still runs on Azure App Service and Vercel as described below. GHCR packages are private by default; if you want `docker pull` to work without authentication, make the packages public from the repository's **Packages** tab.
 
 ---
 
