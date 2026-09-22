@@ -1,0 +1,68 @@
+# Local, fully-containerized stack: mongo + api + client.
+#
+# Usage:
+#   docker compose up --build
+#   docker compose exec api npm run seed   # load demo data (see README)
+#
+# This is separate from, and does not affect, the live Azure/Vercel deployment.
+name: workcentral
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/saas-platform
+      JWT_SECRET: local-dev-secret-change-me
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:3001
+      APP_URL: http://localhost:3001
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+  api_uploads:
